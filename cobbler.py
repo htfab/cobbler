@@ -28,7 +28,7 @@ PAD_SIZE = 0.06
 
 # Description of footprint to generate
 FP_WIDTH = 10
-FP_HEIGHT = 11
+FP_HEIGHT = 10.5
 FP_ORIGIN_X = FP_WIDTH / 2
 FP_ORIGIN_Y = FP_HEIGHT / 2
 
@@ -51,23 +51,24 @@ TRACE_CONTROL1_RATIO = 0.25
 TRACE_CONTROL2_RATIO = 0.1
 
 EDGE_RASTER = 0.5
-CORNER_OFFSET = 0.5
-TOP_LEFT_PAD_COUNT = 3
+CORNER_OFFSET_H = 0
+CORNER_OFFSET_V = 1
+TOP_LEFT_PAD_OFFSETS = [(4, 1), (4, 1), (3, 2), (2, 2), (1, 2)]
 LEFT_PAD_COUNT = 16
-BOTTOM_LEFT_PAD_COUNT = 2
+BOTTOM_LEFT_PAD_OFFSETS = [(2, 2), (3, 2), (4, 1), (4, 1)]
 BOTTOM_PAD_COUNT=11
-BOTTOM_RIGHT_PAD_COUNT = 2
+BOTTOM_RIGHT_PAD_OFFSETS = [(3, 1), (3, 1), (3, 1), (2, 2), (1, 2)]
 RIGHT_PAD_COUNT = 16
-TOP_RIGHT_PAD_COUNT = 2
+TOP_RIGHT_PAD_OFFSETS = [(2, 2), (3, 2), (4, 1), (4, 1)]
 TOP_PAD_COUNT = 11
 
-TOP_LEFT_PADS = [(-FP_ORIGIN_X+CORNER_OFFSET+(TOP_LEFT_PAD_COUNT-1-i)*EDGE_RASTER, FP_ORIGIN_Y) for i in range(TOP_LEFT_PAD_COUNT)]
+TOP_LEFT_PADS = [(-FP_ORIGIN_X+x*EDGE_RASTER, FP_ORIGIN_Y-y*EDGE_RASTER) for x, y in TOP_LEFT_PAD_OFFSETS]
 LEFT_PADS = [(-FP_ORIGIN_X, ((LEFT_PAD_COUNT-1)/2-i)*EDGE_RASTER) for i in range(LEFT_PAD_COUNT)]
-BOTTOM_LEFT_PADS = [(-FP_ORIGIN_X+CORNER_OFFSET+i*EDGE_RASTER, -FP_ORIGIN_Y) for i in range(BOTTOM_LEFT_PAD_COUNT)]
+BOTTOM_LEFT_PADS = [(-FP_ORIGIN_X+x*EDGE_RASTER, -FP_ORIGIN_Y+y*EDGE_RASTER) for x, y in BOTTOM_LEFT_PAD_OFFSETS]
 BOTTOM_PADS = [((i-(BOTTOM_PAD_COUNT-1)/2)*EDGE_RASTER, -FP_ORIGIN_Y) for i in range(BOTTOM_PAD_COUNT)]
-BOTTOM_RIGHT_PADS = [(FP_ORIGIN_X-CORNER_OFFSET-(BOTTOM_RIGHT_PAD_COUNT-1-i)*EDGE_RASTER, -FP_ORIGIN_Y) for i in range(BOTTOM_RIGHT_PAD_COUNT)]
+BOTTOM_RIGHT_PADS = [(FP_ORIGIN_X-x*EDGE_RASTER, -FP_ORIGIN_Y+y*EDGE_RASTER) for x, y in BOTTOM_RIGHT_PAD_OFFSETS]
 RIGHT_PADS = [(FP_ORIGIN_X, (i-(RIGHT_PAD_COUNT-1)/2)*EDGE_RASTER) for i in range(RIGHT_PAD_COUNT)]
-TOP_RIGHT_PADS = [(FP_ORIGIN_X-CORNER_OFFSET-i*EDGE_RASTER, FP_ORIGIN_Y) for i in range(TOP_RIGHT_PAD_COUNT)]
+TOP_RIGHT_PADS = [(FP_ORIGIN_X-x*EDGE_RASTER, FP_ORIGIN_Y-y*EDGE_RASTER) for x, y in TOP_RIGHT_PAD_OFFSETS]
 TOP_PADS = [(((TOP_PAD_COUNT-1)/2-i)*EDGE_RASTER, FP_ORIGIN_Y) for i in range(TOP_PAD_COUNT)]
 EDGE_PADS = [
     *TOP_LEFT_PADS,
@@ -81,7 +82,7 @@ EDGE_PADS = [
 ]
 
 EDGE_MAP = [
-    *range(0, 63),
+    *range(48, 72), *range(0, 48),
 ]
 
 BOND_MAP_REVERSE = {j: i for i, j in enumerate(BOND_MAP)}
@@ -171,7 +172,7 @@ finger_ring_bond = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEI
 finger_ring_outer = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.7, LP_PHI1, LP_PHI2)
 route_ring = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.85, LP_PHI1, LP_PHI2)
 route_ring_epsilon = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.851, LP_PHI1, LP_PHI2)
-glob_ring = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 2.0, LP_PHI1, LP_PHI2)
+glob_ring = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.95, LP_PHI1, LP_PHI2)
 footprint_rect = rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, FP_WIDTH, FP_HEIGHT)
 
 
@@ -211,17 +212,17 @@ edge_pads = [complex(FP_ORIGIN_X+x, FP_ORIGIN_Y-y) for x, y in EDGE_PADS]
 
 edge_lines = []
 center = complex(FP_ORIGIN_X, FP_ORIGIN_Y)
-for i in range(len(PAD_CENTERS)):
+for i in range(LANDING_PADS):
     if EDGE_MAP[i] is None:
         continue
     end = edge_pads[EDGE_MAP[i]]
-    start1 = stripe_coord(route_ring, 4*BOND_MAP[i]-1)
+    start1 = stripe_coord(route_ring, 4*i-1)
     dir1 = (end-start1)/abs(end-start1)
     end1 = end + TRACE_WIDTH/2 * dir1 * 1j
     length1 = abs(end1-start1)
     c11 = start1 + (start1-center)/abs(start1-center) * length1 * TRACE_CONTROL1_RATIO
     c21 = end1 - dir1 * length1 * TRACE_CONTROL2_RATIO
-    start2 = stripe_coord(route_ring, 4*BOND_MAP[i]+1)
+    start2 = stripe_coord(route_ring, 4*i+1)
     dir2 = (end-start2)/abs(end-start2)
     end2 = end - TRACE_WIDTH/2 * dir2 * 1j
     length2 = abs(end2-start2)
