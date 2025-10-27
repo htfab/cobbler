@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import itertools
-from math import pi, cos, sin, tan, atan
+from math import pi, cos, sin, tan, atan, atan2
 from svgpathtools import Path, Line, CubicBezier, Arc
 
 # Description of Caravel die & pads
@@ -27,8 +27,8 @@ GROUND_PADS = [3, 12, 21, 24, 30, 39, 40, 53, 57]
 PAD_SIZE = 0.06
 
 # Description of footprint to generate
-FP_WIDTH = 15
-FP_HEIGHT = 17
+FP_WIDTH = 16 * 0.7
+FP_HEIGHT = 16 * 0.7
 FP_ORIGIN_X = FP_WIDTH / 2
 FP_ORIGIN_Y = FP_HEIGHT / 2
 
@@ -46,7 +46,11 @@ BOND_MAP = [
 ]
 
 # Wires to footprint edge
-EDGE_RASTER = 1
+TRACE_WIDTH = 0.2
+TRACE_CONTROL1_RATIO = 0.2
+TRACE_CONTROL2_RATIO = 0.15
+
+EDGE_RASTER = 0.7
 LEFT_PAD_COUNT = 16
 BOTTOM_PAD_COUNT=16
 RIGHT_PAD_COUNT = 16
@@ -129,6 +133,14 @@ def circle(cx, cy, r):
         Arc(start=complex(cx, cy+r), radius=complex(r, r), rotation=0, large_arc=0, sweep=0, end=complex(cx+r, cy))
     )
 
+def stroke_from_edges(edge1, edge2):
+    return Path(
+        edge1,
+        Line(start=edge1.end, end=edge2.end),
+        edge2.reversed(),
+        Line(start=edge2.start, end=edge1.start),
+    )
+
 
 die_rect = rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT)
 ground_pad = rounded_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 0.15)
@@ -144,8 +156,7 @@ finger_ring_inner = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HE
 mask_ring_outer = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.1, LP_PHI1, LP_PHI2)
 finger_ring_bond = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.4, LP_PHI1, LP_PHI2)
 finger_ring_outer = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.7, LP_PHI1, LP_PHI2)
-finger_circle = circle(FP_ORIGIN_X, FP_ORIGIN_Y, 5.4)
-trace_width = 5.4 * 2*pi / (2*LANDING_PADS)
+glob_ring = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 2.0, LP_PHI1, LP_PHI2)
 footprint_rect = rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, FP_WIDTH, FP_HEIGHT)
 
 
@@ -173,24 +184,34 @@ landing_pads = []
 for i in range(LANDING_PADS):
     landing_pads.append(stripe_coord(finger_ring_bond, 4*i))
 
+
 fingers_no_mask = fingers(mask_ring_outer, finger_ring_outer)
 fingers_ground_no_mask = fingers(ground_ring_mid, finger_ring_outer)
-fingers_mask = fingers(finger_ring_inner, finger_circle)
-fingers_ground_mask = fingers(ground_ring_mid, finger_circle)
+fingers_mask = fingers(finger_ring_inner, glob_ring)
+fingers_ground_mask = fingers(ground_ring_mid, glob_ring)
 fingers_ground_mask2 = fingers(ground_ring_mid, mask_ring_outer)
 
 pad_centers = [complex(FP_ORIGIN_X+x, FP_ORIGIN_Y+y) for x, y in PAD_CENTERS]
-finger_caps = [complex(FP_ORIGIN_X+5.4*cos(i/LANDING_PADS*2*pi), FP_ORIGIN_Y-5.4*sin(i/LANDING_PADS*2*pi)) for i in range(LANDING_PADS)]
 edge_pads = [complex(FP_ORIGIN_X+x, FP_ORIGIN_Y-y) for x, y in EDGE_PADS]
 
 edge_lines = []
 center = complex(FP_ORIGIN_X, FP_ORIGIN_Y)
 for i in range(len(PAD_CENTERS)):
-    start = finger_caps[BOND_MAP[i]]
     end = edge_pads[EDGE_MAP[i]]
-    control1 = (start-center) * 1.2 + center
-    control2 = (end-center) * 1 + center
-    line = Path(CubicBezier(start=start, control1=control1, control2=control2, end=end))
+    normal = TRACE_WIDTH/2 * (end-center)/abs(end-center) * 1j
+    start1 = stripe_coord(glob_ring, 4*BOND_MAP[i]-1)
+    end1 = end + normal
+    length1 = abs(end1-start1)
+    c11 = start1 + (start1-center)/abs(start1-center) * length1 * TRACE_CONTROL1_RATIO
+    c21 = end1 - (end1-center)/abs(end1-center) * length1 * TRACE_CONTROL2_RATIO
+    start2 = stripe_coord(glob_ring, 4*BOND_MAP[i]+1)
+    end2 = end - normal
+    length2 = abs(end2-start2)
+    c12 = start2 + (start2-center)/abs(start2-center) * length2 * TRACE_CONTROL1_RATIO
+    c22 = end2 - (end2-center)/abs(end2-center) * length2 * TRACE_CONTROL2_RATIO
+    edge1 = CubicBezier(start=start1, control1=c11, control2=c21, end=end1)
+    edge2 = CubicBezier(start=start2, control1=c12, control2=c22, end=end2)
+    line = stroke_from_edges(edge1, edge2)
     edge_lines.append(line)
 
 
@@ -221,13 +242,11 @@ with open("preview.svg", "w") as f:
             print(f'<circle cx="{pad_centers[i].real}" cy="{pad_centers[i].imag}" r="{PAD_SIZE/2}" fill="#333333" />', file=f)
             print(f'<circle cx="{landing_pads[j].real}" cy="{landing_pads[j].imag}" r="{PAD_SIZE/2}" fill="#333333" />', file=f)
             print(f'<line x1="{pad_centers[i].real}" y1="{pad_centers[i].imag}" x2="{landing_pads[j].real}" y2="{landing_pads[j].imag}" stroke="#333333" stroke-width="0.02" />', file=f)
-    for pt in finger_caps:
-        print(f'<circle cx="{pt.real}" cy="{pt.imag}" r="{trace_width/2}" fill="#55d400" />', file=f)
     for pt in edge_pads:
-        print(f'<circle cx="{pt.real}" cy="{pt.imag}" r="{trace_width/2}" fill="#55d400" />', file=f)
+        print(f'<circle cx="{pt.real}" cy="{pt.imag}" r="{TRACE_WIDTH/2}" fill="#55d400" />', file=f)
     for line in edge_lines:
-        print(f'<path d="{line.d()}" stroke="#55d400" fill="none" stroke-width="{trace_width}" />', file=f)
-    print(f'<path d="{finger_circle.d()}" stroke="#ffffff" fill="none" stroke-width="0.05" />', file=f)
+        print(f'<path d="{line.d()}" fill="#55d400" />', file=f)
+    print(f'<path d="{glob_ring.d()}" stroke="#ffffff" fill="none" stroke-width="0.05" />', file=f)
     print('</svg>', file=f)
 
 with open("copper.svg", "w") as f:
@@ -246,12 +265,10 @@ with open("copper.svg", "w") as f:
         print(f'<path d="{r.d()}" fill="#000000" />', file=f)
     for r in thermal_bridges:
         print(f'<path d="{r.d()}" fill="#000000" />', file=f)
-    for pt in finger_caps:
-        print(f'<circle cx="{pt.real}" cy="{pt.imag}" r="{trace_width/2}" fill="#000000" />', file=f)
     for pt in edge_pads:
-        print(f'<circle cx="{pt.real}" cy="{pt.imag}" r="{trace_width/2}" fill="#000000" />', file=f)
+        print(f'<circle cx="{pt.real}" cy="{pt.imag}" r="{TRACE_WIDTH/2}" fill="#000000" />', file=f)
     for line in edge_lines:
-        print(f'<path d="{line.d()}" stroke="#000000" fill="none" stroke-width="{trace_width}" />', file=f)
+        print(f'<path d="{line.d()}" fill="#000000" />', file=f)
     print('</svg>', file=f)
 
 with open("mask.svg", "w") as f:
@@ -265,7 +282,7 @@ with open("mask.svg", "w") as f:
 with open("silkscreen.svg", "w") as f:
     print(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {FP_WIDTH} {FP_HEIGHT}" width="{FP_WIDTH}mm" height="{FP_HEIGHT}mm">', file=f)
     print(f'<path d="{footprint_rect.d()}" fill="#e0e0ff" />', file=f)
-    print(f'<path d="{finger_circle.d()}" stroke="#000000" fill="none" stroke-width="0.05" />', file=f)
+    print(f'<path d="{glob_ring.d()}" stroke="#000000" fill="none" stroke-width="0.05" />', file=f)
     print('</svg>', file=f)
 
 with open("user.svg", "w") as f:
