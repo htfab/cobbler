@@ -27,8 +27,8 @@ GROUND_PADS = [3, 12, 21, 24, 30, 39, 40, 53, 57]
 PAD_SIZE = 0.06
 
 # Description of footprint to generate
-FP_WIDTH = 16 * 0.7
-FP_HEIGHT = 16 * 0.7
+FP_WIDTH = 10
+FP_HEIGHT = 11
 FP_ORIGIN_X = FP_WIDTH / 2
 FP_ORIGIN_Y = FP_HEIGHT / 2
 
@@ -47,14 +47,14 @@ BOND_MAP = [
 
 # Wires to footprint edge
 TRACE_WIDTH = 0.2
-TRACE_CONTROL1_RATIO = 0.35
-TRACE_CONTROL2_RATIO = 0.15
+TRACE_CONTROL1_RATIO = 0.25
+TRACE_CONTROL2_RATIO = 0.1
 
 EDGE_RASTER = 0.5
-LEFT_PAD_COUNT = 16
-BOTTOM_PAD_COUNT=16
-RIGHT_PAD_COUNT = 16
-TOP_PAD_COUNT = 16
+LEFT_PAD_COUNT = 21
+BOTTOM_PAD_COUNT=11
+RIGHT_PAD_COUNT = 20
+TOP_PAD_COUNT = 11
 
 LEFT_PADS = [(-FP_ORIGIN_X, ((LEFT_PAD_COUNT-1)/2-i)*EDGE_RASTER) for i in range(LEFT_PAD_COUNT)]
 BOTTOM_PADS = [((i-(BOTTOM_PAD_COUNT-1)/2)*EDGE_RASTER, -FP_ORIGIN_Y) for i in range(BOTTOM_PAD_COUNT)]
@@ -68,7 +68,7 @@ EDGE_PADS = [
 ]
 
 EDGE_MAP = [
-    *range(61, 64), *range(0, 18), *range(19, 61),
+    *range(0, 63),
 ]
 
 BOND_MAP_REVERSE = {j: i for i, j in enumerate(BOND_MAP)}
@@ -156,6 +156,8 @@ finger_ring_inner = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HE
 mask_ring_outer = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.1, LP_PHI1, LP_PHI2)
 finger_ring_bond = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.4, LP_PHI1, LP_PHI2)
 finger_ring_outer = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.7, LP_PHI1, LP_PHI2)
+route_ring = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.85, LP_PHI1, LP_PHI2)
+route_ring_epsilon = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.851, LP_PHI1, LP_PHI2)
 glob_ring = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 2.0, LP_PHI1, LP_PHI2)
 footprint_rect = rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, FP_WIDTH, FP_HEIGHT)
 
@@ -187,8 +189,8 @@ for i in range(LANDING_PADS):
 
 fingers_no_mask = fingers(mask_ring_outer, finger_ring_outer)
 fingers_ground_no_mask = fingers(ground_ring_mid, finger_ring_outer)
-fingers_mask = fingers(finger_ring_inner, glob_ring)
-fingers_ground_mask = fingers(ground_ring_mid, glob_ring)
+fingers_mask = fingers(finger_ring_inner, route_ring_epsilon)
+fingers_ground_mask = fingers(ground_ring_mid, route_ring_epsilon)
 fingers_ground_mask2 = fingers(ground_ring_mid, mask_ring_outer)
 
 pad_centers = [complex(FP_ORIGIN_X+x, FP_ORIGIN_Y+y) for x, y in PAD_CENTERS]
@@ -197,14 +199,16 @@ edge_pads = [complex(FP_ORIGIN_X+x, FP_ORIGIN_Y-y) for x, y in EDGE_PADS]
 edge_lines = []
 center = complex(FP_ORIGIN_X, FP_ORIGIN_Y)
 for i in range(len(PAD_CENTERS)):
+    if EDGE_MAP[i] is None:
+        continue
     end = edge_pads[EDGE_MAP[i]]
-    start1 = stripe_coord(glob_ring, 4*BOND_MAP[i]-1)
+    start1 = stripe_coord(route_ring, 4*BOND_MAP[i]-1)
     dir1 = (end-start1)/abs(end-start1)
     end1 = end + TRACE_WIDTH/2 * dir1 * 1j
     length1 = abs(end1-start1)
     c11 = start1 + (start1-center)/abs(start1-center) * length1 * TRACE_CONTROL1_RATIO
     c21 = end1 - dir1 * length1 * TRACE_CONTROL2_RATIO
-    start2 = stripe_coord(glob_ring, 4*BOND_MAP[i]+1)
+    start2 = stripe_coord(route_ring, 4*BOND_MAP[i]+1)
     dir2 = (end-start2)/abs(end-start2)
     end2 = end - TRACE_WIDTH/2 * dir2 * 1j
     length2 = abs(end2-start2)
