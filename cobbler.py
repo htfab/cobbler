@@ -51,19 +51,32 @@ TRACE_CONTROL1_RATIO = 0.25
 TRACE_CONTROL2_RATIO = 0.1
 
 EDGE_RASTER = 0.5
-LEFT_PAD_COUNT = 21
+CORNER_OFFSET = 0.5
+TOP_LEFT_PAD_COUNT = 3
+LEFT_PAD_COUNT = 16
+BOTTOM_LEFT_PAD_COUNT = 2
 BOTTOM_PAD_COUNT=11
-RIGHT_PAD_COUNT = 20
+BOTTOM_RIGHT_PAD_COUNT = 2
+RIGHT_PAD_COUNT = 16
+TOP_RIGHT_PAD_COUNT = 2
 TOP_PAD_COUNT = 11
 
+TOP_LEFT_PADS = [(-FP_ORIGIN_X+CORNER_OFFSET+(TOP_LEFT_PAD_COUNT-1-i)*EDGE_RASTER, FP_ORIGIN_Y) for i in range(TOP_LEFT_PAD_COUNT)]
 LEFT_PADS = [(-FP_ORIGIN_X, ((LEFT_PAD_COUNT-1)/2-i)*EDGE_RASTER) for i in range(LEFT_PAD_COUNT)]
+BOTTOM_LEFT_PADS = [(-FP_ORIGIN_X+CORNER_OFFSET+i*EDGE_RASTER, -FP_ORIGIN_Y) for i in range(BOTTOM_LEFT_PAD_COUNT)]
 BOTTOM_PADS = [((i-(BOTTOM_PAD_COUNT-1)/2)*EDGE_RASTER, -FP_ORIGIN_Y) for i in range(BOTTOM_PAD_COUNT)]
+BOTTOM_RIGHT_PADS = [(FP_ORIGIN_X-CORNER_OFFSET-(BOTTOM_RIGHT_PAD_COUNT-1-i)*EDGE_RASTER, -FP_ORIGIN_Y) for i in range(BOTTOM_RIGHT_PAD_COUNT)]
 RIGHT_PADS = [(FP_ORIGIN_X, (i-(RIGHT_PAD_COUNT-1)/2)*EDGE_RASTER) for i in range(RIGHT_PAD_COUNT)]
+TOP_RIGHT_PADS = [(FP_ORIGIN_X-CORNER_OFFSET-i*EDGE_RASTER, FP_ORIGIN_Y) for i in range(TOP_RIGHT_PAD_COUNT)]
 TOP_PADS = [(((TOP_PAD_COUNT-1)/2-i)*EDGE_RASTER, FP_ORIGIN_Y) for i in range(TOP_PAD_COUNT)]
 EDGE_PADS = [
+    *TOP_LEFT_PADS,
     *LEFT_PADS,
+    *BOTTOM_LEFT_PADS,
     *BOTTOM_PADS,
+    *BOTTOM_RIGHT_PADS,
     *RIGHT_PADS,
+    *TOP_RIGHT_PADS,
     *TOP_PADS,
 ]
 
@@ -143,12 +156,12 @@ def stroke_from_edges(edge1, edge2):
 
 
 die_rect = rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT)
-ground_pad = rounded_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 0.15)
+mask_ring_inner = rounded_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 0.15)
 thermal_bridges_masked = [rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH+1.7, 0.3),
                           rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, 0.3, DIE_HEIGHT+1.7)]
 thermal_bridges = [rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH+0.6, 0.3),
                    rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, 0.3, DIE_HEIGHT+0.6)]
-mask_ring_inner = rounded_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 0.3)
+ground_pad = rounded_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 0.3)
 ground_ring_inner = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 0.5, LP_PHI1, LP_PHI2)
 ground_ring_mid = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 0.65, LP_PHI1, LP_PHI2)
 ground_ring_outer = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 0.8, LP_PHI1, LP_PHI2)
@@ -235,12 +248,12 @@ with open("preview.svg", "w") as f:
             print(f'<path d="{fingers_no_mask[i].d()}" fill="#ffff00" />', file=f)
     print(f'<path d="{ground_ring_outer.d()}" fill="#55d400" />', file=f)
     print(f'<path d="{ground_ring_inner.d()}" fill="#008000" />', file=f)
-    print(f'<path d="{mask_ring_inner.d()}" fill="#aa8800" />', file=f)
     for r in thermal_bridges_masked:
         print(f'<path d="{r.d()}" fill="#55d400" />', file=f)
     for r in thermal_bridges:
         print(f'<path d="{r.d()}" fill="#ffff00" />', file=f)
-    print(f'<path d="{ground_pad.d()}" fill="#ffff00" />', file=f)
+    print(f'<path d="{ground_pad.d()}" fill="#55d400" />', file=f)
+    print(f'<path d="{mask_ring_inner.d()}" fill="#ffff00" />', file=f)
     print(f'<path d="{die_rect.d()}" fill="#999999" />', file=f)
     for i, j in enumerate(BOND_MAP):
         if j is not None:
