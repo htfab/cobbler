@@ -47,10 +47,10 @@ BOND_MAP = [
 
 # Wires to footprint edge
 TRACE_WIDTH = 0.2
-TRACE_CONTROL1_RATIO = 0.2
+TRACE_CONTROL1_RATIO = 0.35
 TRACE_CONTROL2_RATIO = 0.15
 
-EDGE_RASTER = 0.7
+EDGE_RASTER = 0.5
 LEFT_PAD_COUNT = 16
 BOTTOM_PAD_COUNT=16
 RIGHT_PAD_COUNT = 16
@@ -198,17 +198,18 @@ edge_lines = []
 center = complex(FP_ORIGIN_X, FP_ORIGIN_Y)
 for i in range(len(PAD_CENTERS)):
     end = edge_pads[EDGE_MAP[i]]
-    normal = TRACE_WIDTH/2 * (end-center)/abs(end-center) * 1j
     start1 = stripe_coord(glob_ring, 4*BOND_MAP[i]-1)
-    end1 = end + normal
+    dir1 = (end-start1)/abs(end-start1)
+    end1 = end + TRACE_WIDTH/2 * dir1 * 1j
     length1 = abs(end1-start1)
     c11 = start1 + (start1-center)/abs(start1-center) * length1 * TRACE_CONTROL1_RATIO
-    c21 = end1 - (end1-center)/abs(end1-center) * length1 * TRACE_CONTROL2_RATIO
+    c21 = end1 - dir1 * length1 * TRACE_CONTROL2_RATIO
     start2 = stripe_coord(glob_ring, 4*BOND_MAP[i]+1)
-    end2 = end - normal
+    dir2 = (end-start2)/abs(end-start2)
+    end2 = end - TRACE_WIDTH/2 * dir2 * 1j
     length2 = abs(end2-start2)
     c12 = start2 + (start2-center)/abs(start2-center) * length2 * TRACE_CONTROL1_RATIO
-    c22 = end2 - (end2-center)/abs(end2-center) * length2 * TRACE_CONTROL2_RATIO
+    c22 = end2 - dir2 * length2 * TRACE_CONTROL2_RATIO
     edge1 = CubicBezier(start=start1, control1=c11, control2=c21, end=end1)
     edge2 = CubicBezier(start=start2, control1=c12, control2=c22, end=end2)
     line = stroke_from_edges(edge1, edge2)
