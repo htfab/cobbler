@@ -173,6 +173,7 @@ finger_ring_outer = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HE
 route_ring = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.85, LP_PHI1, LP_PHI2)
 route_ring_epsilon = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.851, LP_PHI1, LP_PHI2)
 glob_ring = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 1.95, LP_PHI1, LP_PHI2)
+courtyard_ring = bezier_rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, DIE_WIDTH, DIE_HEIGHT, 2.2, LP_PHI1, LP_PHI2)
 footprint_rect = rectangle(FP_ORIGIN_X, FP_ORIGIN_Y, FP_WIDTH, FP_HEIGHT)
 
 
@@ -265,7 +266,8 @@ with open("preview.svg", "w") as f:
         print(f'<circle cx="{pt.real}" cy="{pt.imag}" r="{TRACE_WIDTH/2}" fill="#55d400" />', file=f)
     for line in edge_lines:
         print(f'<path d="{line.d()}" fill="#55d400" />', file=f)
-    print(f'<path d="{glob_ring.d()}" stroke="#ffffff" fill="none" stroke-width="0.05" />', file=f)
+    print(f'<path d="{glob_ring.d()}" stroke="#ffffff" fill="none" stroke-width="0.12" />', file=f)
+    print(f'<path d="{courtyard_ring.d()}" stroke="#ff00ff" fill="none" stroke-width="0.05" />', file=f)
     print('</svg>', file=f)
 
 with open("copper.svg", "w") as f:
@@ -301,7 +303,13 @@ with open("mask.svg", "w") as f:
 with open("silkscreen.svg", "w") as f:
     print(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {FP_WIDTH} {FP_HEIGHT}" width="{FP_WIDTH}mm" height="{FP_HEIGHT}mm">', file=f)
     print(f'<path d="{footprint_rect.d()}" fill="#e0e0ff" />', file=f)
-    print(f'<path d="{glob_ring.d()}" stroke="#000000" fill="none" stroke-width="0.05" />', file=f)
+    print(f'<path d="{glob_ring.d()}" stroke="#000000" fill="none" stroke-width="0.12" />', file=f)
+    print('</svg>', file=f)
+
+with open("courtyard.svg", "w") as f:
+    print(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {FP_WIDTH} {FP_HEIGHT}" width="{FP_WIDTH}mm" height="{FP_HEIGHT}mm">', file=f)
+    print(f'<path d="{footprint_rect.d()}" fill="#e0e0ff" />', file=f)
+    print(f'<path d="{courtyard_ring.d()}" stroke="#000000" fill="none" stroke-width="0.05" />', file=f)
     print('</svg>', file=f)
 
 with open("user.svg", "w") as f:
